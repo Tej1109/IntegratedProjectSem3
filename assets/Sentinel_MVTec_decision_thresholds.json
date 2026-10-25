@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "selection_method": "Per-category F2 maximization on controller_dev; ties prefer higher precision then higher threshold",
+  "selected_on": "controller_dev",
+  "evaluated_on": "heldout_eval (never used to choose thresholds)",
+  "score_column": "score",
+  "score_semantics": "Category-calibrated empirical percentile against normal-only calibration references; not a defect probability.",
+  "fallback_threshold": 0.95,
+  "thresholds": {
+    "grid": 0.8867924528301887,
+    "zipper": 0.7708333333333334,
+    "hazelnut": 0.8333333333333334,
+    "leather": 0.9795918367346939,
+    "toothbrush": 0.8333333333333334
+  },
+  "category_details": {
+    "grid": {
+      "selected_threshold_display": 0.8868,
+      "controller_dev_n": 23,
+      "controller_dev_anomalies": 17,
+      "controller_dev_normals": 6,
+      "heldout_fixed_recall": 0.25,
+      "heldout_tuned_recall": 0.925,
+      "heldout_fixed_precision": 1.0,
+      "heldout_tuned_precision": 0.9487
+    },
+    "zipper": {
+      "selected_threshold_display": 0.7708,
+      "controller_dev_n": 46,
+      "controller_dev_anomalies": 36,
+      "controller_dev_normals": 10,
+      "heldout_fixed_recall": 0.5422,
+      "heldout_tuned_recall": 0.988,
+      "heldout_fixed_precision": 1.0,
+      "heldout_tuned_precision": 0.9111
+    },
+    "hazelnut": {
+      "selected_threshold_display": 0.8333,
+      "controller_dev_n": 32,
+      "controller_dev_anomalies": 20,
+      "controller_dev_normals": 12,
+      "heldout_fixed_recall": 0.9,
+      "heldout_tuned_recall": 0.98,
+      "heldout_fixed_precision": 0.9375,
+      "heldout_tuned_precision": 0.9423
+    },
+    "leather": {
+      "selected_threshold_display": 0.9796,
+      "controller_dev_n": 38,
+      "controller_dev_anomalies": 28,
+      "controller_dev_normals": 10,
+      "heldout_fixed_recall": 1.0,
+      "heldout_tuned_recall": 1.0,
+      "heldout_fixed_precision": 0.9412,
+      "heldout_tuned_precision": 0.9412
+    },
+    "toothbrush": {
+      "selected_threshold_display": 0.8333,
+      "controller_dev_n": 13,
+      "controller_dev_anomalies": 9,
+      "controller_dev_normals": 4,
+      "heldout_fixed_recall": 0.5238,
+      "heldout_tuned_recall": 0.9524,
+      "heldout_fixed_precision": 1.0,
+      "heldout_tuned_precision": 1.0
+    }
+  },
+  "notes": "Threshold values are from the user's calibration run output. Threshold selection uses controller_dev labels only. heldout_eval metrics are comparison results, not inputs to threshold selection. The app displays exact in-code values and uses this file when loaded as an asset override."
+}
