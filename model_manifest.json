@@ -1,0 +1,44 @@
+{
+  "project": "Hybrid STFPM-for-grid + YOLO26/PatchCore-for-other-categories + DINOv2 + Temporal Transformer + PPO",
+  "created_utc": "2026-10-25T05:03:58Z",
+  "dataset_source": "Kaggle mirror: ipythonx/mvtec-ad",
+  "dataset_categories": [
+    "grid",
+    "zipper",
+    "hazelnut",
+    "leather",
+    "toothbrush"
+  ],
+  "dataset_location": "KaggleHub cache/temporary Colab runtime only; never copied to Drive",
+  "primary_anomaly_detector": {
+    "grid": "STFPM-ResNet18",
+    "zipper": "YOLO26 + PatchCore-style k-NN",
+    "hazelnut": "YOLO26 + PatchCore-style k-NN",
+    "leather": "YOLO26 + PatchCore-style k-NN",
+    "toothbrush": "YOLO26 + PatchCore-style k-NN"
+  },
+  "stfpm_categories_trained": [
+    "grid"
+  ],
+  "stfpm_epochs": 15,
+  "stfpm_input_size": 256,
+  "stfpm_models": {
+    "grid": {
+      "teacher": "/content/drive/MyDrive/MVTec_RL_Anomaly_Project/models/stfpm_teacher_resnet18_grid.pth",
+      "student": "/content/drive/MyDrive/MVTec_RL_Anomaly_Project/models/stfpm_student_resnet18_grid.pth",
+      "calibration": "/content/drive/MyDrive/MVTec_RL_Anomaly_Project/assets/stfpm_calibration_grid.npz"
+    }
+  },
+  "legacy_baseline": "YOLO26 global embedding + Wide-ResNet PatchCore-style k-NN ensemble",
+  "subtype_classifier": "dinov2_vits14 visual features + regularized LinearSVC; YOLO26 LinearSVC baseline included",
+  "temporal_transformer_weights": "/content/drive/MyDrive/MVTec_RL_Anomaly_Project/models/causal_temporal_transformer.pt",
+  "ppo_model": "/content/drive/MyDrive/MVTec_RL_Anomaly_Project/models/ppo_inspection_policy.zip",
+  "ppo_timesteps": 40000,
+  "score_calibration": "Per-category empirical percentile against normal-only calibration references; not a defect probability.",
+  "temporal_input": "Common routed score/local/global evidence fields and temporal score dynamics; STFPM-specific map features are not required for non-grid categories.",
+  "human_review_guardrail": {
+    "score_min": 0.97,
+    "delta_min": 0.2
+  },
+  "caveat": "MVTec AD contains still images; temporal sequences are synthetic and not real-video deployment evidence."
+}
