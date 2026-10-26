@@ -1,0 +1,6 @@
+category,normal_reference_images,test_images,embedding_dimension,reference_file
+grid,264,78,512,reference_grid.npz
+zipper,240,151,512,reference_zipper.npz
+hazelnut,391,110,512,reference_hazelnut.npz
+leather,245,124,512,reference_leather.npz
+toothbrush,60,42,512,reference_toothbrush.npz

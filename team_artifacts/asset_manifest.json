@@ -1,0 +1,72 @@
+{
+  "bundle_name": "MVTec_Team_Assets",
+  "built_at_utc": "2026-10-26T09:41:48Z",
+  "categories": [
+    "grid",
+    "zipper",
+    "hazelnut",
+    "leather",
+    "toothbrush"
+  ],
+  "encoder": "torchvision ResNet-18 ImageNet pretrained; final FC replaced by Identity; 512-D embeddings",
+  "preprocessing": "RGB; OpenCV resize 224x224 INTER_AREA; ImageNet mean/std normalization; no classic preprocessing",
+  "vision_methods": [
+    "knn_cosine",
+    "mahalanobis",
+    "ocsvm"
+  ],
+  "calibration": "5-fold cross-validation over train/good; default cutoff is 95th percentile",
+  "rl_policy": "shared Q-learning policy using the Step 2 held-out train split; labels only used in offline reward calculation",
+  "files": [
+    {
+      "path": "team_artifacts/outputs/vision/current_anomaly_score.csv",
+      "bytes": 229047,
+      "sha256": "aa41508f715ba526086bccc1fad6ceedcc0668002866d7f3e977a9e83b996f06"
+    },
+    {
+      "path": "team_artifacts/rl/heldout_policy_decisions.csv",
+      "bytes": 6203,
+      "sha256": "38fb569148f72495b5bd8bd933a4c2791c4e7026e51877ed6915924c124ecd1d"
+    },
+    {
+      "path": "team_artifacts/rl/shared_q_policy.json",
+      "bytes": 4067,
+      "sha256": "f4111135317e7bdbfa32eb104b928cf4de825e66ac3ce8318a04a329a7a22486"
+    },
+    {
+      "path": "team_artifacts/vision/reference_grid.npz",
+      "bytes": 456582,
+      "sha256": "4420e06437907c7d87aee14915078f524553900a77d6c5d9ac07cbfae9c89918"
+    },
+    {
+      "path": "team_artifacts/vision/reference_hazelnut.npz",
+      "bytes": 727875,
+      "sha256": "c7abbbd9e69cce5d66e848de24691bc24cd2d888e3a5cdfded99066f76d948b1"
+    },
+    {
+      "path": "team_artifacts/vision/reference_leather.npz",
+      "bytes": 417525,
+      "sha256": "cace3574644d5ab73363f2d1915d9537199ef49551ca6a1a3d071077acafe40f"
+    },
+    {
+      "path": "team_artifacts/vision/reference_toothbrush.npz",
+      "bytes": 112993,
+      "sha256": "e504be73907b45760dcab81a3c528d6ccfd66d0dbda30f910e5edcee6f8164f0"
+    },
+    {
+      "path": "team_artifacts/vision/reference_zipper.npz",
+      "bytes": 438139,
+      "sha256": "d97917d445105aaf760536cdcafd98e885741c0cb1eab648a014eb2fa3c69379"
+    },
+    {
+      "path": "team_artifacts/vision/resnet18_imagenet1k_v1.pth",
+      "bytes": 44782449,
+      "sha256": "24786f4afc8c3b170fa24e08a6ecf7993c49215795f7db141b9ece970bda1ff9"
+    },
+    {
+      "path": "team_artifacts/vision/vision_asset_summary.csv",
+      "bytes": 287,
+      "sha256": "137c9c4151e77876b09dc6b520dac382a921cfe962f8e5dadc6b35b52fcc8994"
+    }
+  ]
+}

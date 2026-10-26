@@ -1,0 +1,171 @@
+{
+  "metadata": {
+    "project": "Adaptive Visual Inspection System with RL-Based Inspection Scheduling",
+    "source_notebooks": [
+      "step1_vision.ipynb",
+      "step2_RL_Scheduler.ipynb"
+    ],
+    "vision_method": "mahalanobis",
+    "actions_in_q_value_order": [
+      "skip",
+      "prediction",
+      "expert"
+    ],
+    "state_definition": "(category, risk_level); risk derived from normalized_score - normalized_threshold; margin=-0.10 separates low from medium; zero separates medium from high",
+    "training_protocol": "Step 2 held-out policy training: stratified 80/20 split; Q-table trained only on the training split; 500 episodes",
+    "random_seed": 42,
+    "training_records": 404,
+    "heldout_records": 101,
+    "episodes": 500,
+    "alpha": 0.1,
+    "gamma": 0.9,
+    "initial_epsilon": 0.2,
+    "epsilon_decay": 0.995,
+    "minimum_epsilon": 0.05,
+    "action_costs": {
+      "skip": 0,
+      "prediction": 1,
+      "expert": 5
+    },
+    "missed_defect_penalty": 10,
+    "false_rejection_penalty": 3,
+    "note": "Reward learning is offline and uses labels only to simulate outcomes. Expert review is assumed perfect in this simulation; results are not real-world performance guarantees. This exports the core held-out Q-table, not the separate realistic-stream experiment's REALISTIC_Q_TABLE."
+  },
+  "states": [
+    {
+      "category": "grid",
+      "risk_level": "high",
+      "q_values": [
+        -7.522869599609334,
+        -1.7734728964903679,
+        -4.999980066382606
+      ]
+    },
+    {
+      "category": "grid",
+      "risk_level": "low",
+      "q_values": [
+        -8.095778157159012,
+        -6.139852876778408,
+        -4.9999999999999964
+      ]
+    },
+    {
+      "category": "grid",
+      "risk_level": "medium",
+      "q_values": [
+        -8.270404984122965,
+        -10.421494959704049,
+        -4.9999999999999964
+      ]
+    },
+    {
+      "category": "hazelnut",
+      "risk_level": "high",
+      "q_values": [
+        -9.99931153010603,
+        -1.105203627890416,
+        -4.9999999999999964
+      ]
+    },
+    {
+      "category": "hazelnut",
+      "risk_level": "low",
+      "q_values": [
+        -0.571455638396456,
+        -1.7746096884094604,
+        -4.9999999999999964
+      ]
+    },
+    {
+      "category": "hazelnut",
+      "risk_level": "medium",
+      "q_values": [
+        -5.753816311874479,
+        -6.074514247858915,
+        -4.9999999999999964
+      ]
+    },
+    {
+      "category": "leather",
+      "risk_level": "high",
+      "q_values": [
+        -8.406431584533177,
+        -1.586959352525494,
+        -4.9999999999999964
+      ]
+    },
+    {
+      "category": "leather",
+      "risk_level": "low",
+      "q_values": [
+        0.0,
+        -0.9999897095698544,
+        -4.9986513919720466
+      ]
+    },
+    {
+      "category": "leather",
+      "risk_level": "medium",
+      "q_values": [
+        -2.3347952660490243,
+        -4.64351494241763,
+        -4.999999501030559
+      ]
+    },
+    {
+      "category": "toothbrush",
+      "risk_level": "high",
+      "q_values": [
+        -9.999999999999087,
+        -0.9999999999999996,
+        -4.999999999999996
+      ]
+    },
+    {
+      "category": "toothbrush",
+      "risk_level": "low",
+      "q_values": [
+        -3.7384937660000657,
+        -2.5607500898805675,
+        -4.999993744619644
+      ]
+    },
+    {
+      "category": "toothbrush",
+      "risk_level": "medium",
+      "q_values": [
+        -9.113706188034751,
+        -9.165510013036677,
+        -4.9999999999999964
+      ]
+    },
+    {
+      "category": "zipper",
+      "risk_level": "high",
+      "q_values": [
+        -9.999992064102539,
+        -1.1732418924796433,
+        -4.9999999999999964
+      ]
+    },
+    {
+      "category": "zipper",
+      "risk_level": "low",
+      "q_values": [
+        -1.946407481968146,
+        -3.6785552507027925,
+        -4.9999999999999964
+      ]
+    },
+    {
+      "category": "zipper",
+      "risk_level": "medium",
+      "q_values": [
+        -7.229644187642055,
+        -7.425803666248769,
+        -4.9999999999999964
+      ]
+    }
+  ]
+}
