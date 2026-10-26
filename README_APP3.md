@@ -15,7 +15,7 @@ your_project/
   prepare_team_assets.py          # exports the peer notebook's Q-learning policy
   pages/
     01_Sentinel.py                # runs existing app2.py as a Streamlit page
-    02_Team_Approach.py           # video-upload page for the notebooks' approach
+    02_Adaptive_Inspection.py           # video-upload page for the notebooks' approach
   data/
     mvtec/
       grid/train/good/...
