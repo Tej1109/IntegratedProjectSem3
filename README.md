@@ -1,14 +1,15 @@
-# Sentinel — MVTec Anomaly Inspection Studio
+# MVTec Adaptive Visual Inspection — Sentinel + Team Pipelines
 
-**A visual anomaly detector with an optional reinforcement-learning inspection controller.**
+**A shared Streamlit workspace with two independent anomaly-detection pipelines and optional reinforcement-learning inspection policies.**
 
-Sentinel looks for defects in five MVTec AD object categories: **grid, zipper, hazelnut, leather, and toothbrush**. It can inspect a video frame by frame, show where unusual visual evidence appears, track anomaly scores, and—when RL mode is selected—ask a trained PPO policy whether to keep monitoring, flag a frame, or send it for human review.
+The project inspects five MVTec AD object categories: **grid, zipper, hazelnut, leather, and toothbrush**. Its shared App3 hub makes two approaches available from one local Streamlit workspace:
 
-This README explains the project in plain English: what each part does, why we used it, what worked, how to run the app, and what the results do (and do not) prove.
+- **Sentinel:** the existing hybrid visual detector, heatmaps, dashboards, and optional PPO V4 inspection controller.
+- **Adaptive Visual Inspection:** the team's separate ResNet-18 embedding pipeline with kNN cosine distance, Mahalanobis distance, or One-Class SVM, plus an optional Q-learning scheduler for the Mahalanobis route.
 
-> **Important in one sentence:** the image detector is evaluated on held-out MVTec images; the PPO V4 controller is evaluated on synthetic sequences made from those still images. The PPO results are useful evidence for the experiment, but they are not yet proof of performance on real production video.
+The two approaches are intentionally kept separate. They use different feature representations, score distributions, thresholds, assets, and decision policies. App3 is a navigation and demonstration hub—not a fused detector.
 
----
+> **Important in one sentence:** Sentinel's detector is evaluated on held-out MVTec images and PPO V4 on synthetic sequences made from those still images; the team route is a separate pipeline whose thresholds and Q-learning behavior should be interpreted using its own calibration and evaluation artifacts. Neither route is yet proof of performance on real production video.
 
 ## Contents
 
@@ -18,6 +19,7 @@ This README explains the project in plain English: what each part does, why we u
 - [Why did we use each model?](#why-did-we-use-each-model)
 - [Why did we spend so much time on PPO?](#why-did-we-spend-so-much-time-on-ppo)
 - [What does PPO V4 do?](#what-does-ppo-v4-do)
+- [How does the team's Q-learning scheduler work?](#how-does-the-teams-q-learning-scheduler-work)
 - [Results](#results)
 - [What do the metrics mean?](#what-do-the-metrics-mean)
 - [Dataset and experiment setup](#dataset-and-experiment-setup)
@@ -28,15 +30,17 @@ This README explains the project in plain English: what each part does, why we u
 - [Limitations and next steps](#limitations-and-next-steps)
 - [References](#references)
 
----
-
 ## What is this project?
 
-Most basic anomaly detectors answer one question: **“Does this image look unusual?”** Sentinel tries to support the next question too: **“What should the inspection system do about it?”**
+Most basic anomaly detectors answer one question: **“Does this image look unusual?”** This project explores two ways to support inspection: one route estimates visual anomaly evidence, while a second experimental route can also recommend what the inspection system should do next.
 
-The visual part compares an inspected image or video frame with reference examples of normal products. It produces a calibrated anomaly score and spatial evidence for the suspicious area. The app can show the score, heatmap, selected region of interest (ROI), and the exact frame where the score was recorded.
+The shared app starts in `app3.py`. From there, the user can open the existing Sentinel implementation or the team's Adaptive Visual Inspection route. Both work with the same five MVTec categories, but they do **not** share or fuse their detector outputs.
 
-The optional reinforcement-learning (RL) part uses score history and other evidence to choose one of three actions:
+### Route 1: Sentinel
+
+Sentinel uses a hybrid detector selected by category: STFPM with a ResNet-18 teacher/student pair for `grid`, and YOLO26 global embeddings plus a PatchCore-style local patch memory for `zipper`, `hazelnut`, `leather`, and `toothbrush`. It reports calibrated anomaly scores, heatmaps, ROI-aligned evidence, and frame-level traces.
+
+Sentinel also has an optional PPO V4 controller. It uses score history and evidence features to choose one of three actions:
 
 | PPO V4 action | In plain English |
 |---|---|
@@ -44,19 +48,37 @@ The optional reinforcement-learning (RL) part uses score history and other evide
 | `FLAG_ANOMALY` | Mark the frame as suspicious so it can be inspected. |
 | `HUMAN_REVIEW` | Escalate the event for a person to review. |
 
-The app has two modes so the visual detector can be tested on its own or alongside the learned controller.
+### Route 2: Adaptive Visual Inspection
+
+The team route uses a separate pretrained ResNet-18 encoder to represent each sampled frame as a 512-dimensional embedding. It offers three independent anomaly-scoring methods: kNN cosine distance, Mahalanobis distance, and One-Class SVM. It also includes the team's original Q-learning scheduler, which is compatible with **Mahalanobis scores only**.
+
+This route has its own reference bundles, fixed category-specific thresholds, calibration, outputs, and policy assets under `team_artifacts/`. It does not replace Sentinel's models or thresholds.
 
 ## What can the app do?
 
-### Anomaly Detection Only
+### Sentinel — Anomaly Detection Only
 
-Runs the visual detector and heatmap pipeline without loading the PPO controller. Use this mode when you want to inspect anomaly scores, examine the suspicious region, or compare how the detector behaves without RL actions.
+Runs Sentinel's visual detector and heatmap pipeline without loading the PPO controller. Use this mode to inspect anomaly scores, examine suspicious regions, or compare detector behavior without RL actions.
 
-### RL-Assisted Inspection
+### Sentinel — RL-Assisted Inspection
 
 Adds the trained PPO V4 controller. It considers the current score, short-term score changes, whether high scores persist, local/global evidence, previous actions, and review cooldown state. The app displays the selected action and keeps a frame-level trace.
 
+### Adaptive Visual Inspection
+
+The separate team route supports an uploaded video and lets users select one of three vision methods:
+
+| Method | What it measures |
+|---|---|
+| **kNN cosine distance** | Distance from nearby normal-reference embeddings (`k=5`). |
+| **Mahalanobis distance** | Deviation from the normal-reference embedding distribution, using Ledoit–Wolf covariance shrinkage. |
+| **One-Class SVM** | An RBF One-Class SVM (`nu=0.1`), with score direction adjusted so higher values indicate greater anomaly evidence. |
+
+The team's optional Q-learning scheduler is enabled only when Mahalanobis is selected and a compatible policy file is present. Its `expert` action is displayed as a human-review recommendation; it does not perform a real expert assessment.
+
 ### Video and reporting features
+
+**Sentinel provides:**
 
 - Upload a video and inspect sampled frames.
 - View an annotated result video **inside the app**; the app attempts to transcode output to a browser-friendly H.264 MP4, with WebM/VP9 as a fallback.
@@ -65,34 +87,48 @@ Adds the trained PPO V4 controller. It considers the current score, short-term s
 - Click **Create dashboard** for summary statistics, score trends, maximum/minimum score locations, high-score frames, and action counts in RL mode.
 - Export a standalone HTML dashboard, frame-level CSV, and a results ZIP.
 
-The app performs inference on the computer running Streamlit. It does not need to upload your video to a remote inference service.
+**Adaptive Visual Inspection provides:**
+
+- Configurable frame-sampling interval and maximum number of sampled frames.
+- Category and vision-method selection.
+- Frame-level raw score, normalized anomaly score, fixed threshold, risk level, and NORMAL/ANOMALY prediction.
+- Optional Q-learning action and recommended next step when the Mahalanobis policy is active.
+- Summary metrics, including frames scored, anomalies flagged, anomaly rate, mean normalized score, and fixed threshold.
+- A score timeline, an action-count view when Q-learning is used, a sampled-frame review clip, and a downloadable frame-level CSV.
+
+The team route's review clip contains sampled frames in order with frame indices and timestamps overlaid. It is not a frame-for-frame export of the entire source video.
+
+Both routes run inference on the computer hosting Streamlit. Neither needs to upload the input video to a remote inference service.
 
 ## How does it work?
 
-At a high level:
+At a high level, App3 routes the uploaded video to one of two independent inspection pipelines:
 
 ```mermaid
 flowchart TD
-    A[Uploaded image or video] --> B[Sample frames]
-    B --> C[Category-specific visual detector]
-    C --> D[Calibrated anomaly score + local/global evidence]
-    D --> E[Heatmap + ROI + frame trace]
-    D --> F{Inspection mode}
-    F -->|Anomaly Detection Only| G[Report visual evidence]
-    F -->|RL-Assisted Inspection| H[Build PPO V4 state from score history and evidence]
-    H --> I{PPO V4 action}
-    I --> J[MONITOR]
-    I --> K[FLAG_ANOMALY]
-    I --> L[HUMAN_REVIEW]
-    G --> M[Dashboard + CSV + video]
-    J --> M
-    K --> M
-    L --> M
+    A[App3 hub] --> B{Choose route}
+    B -->|Sentinel| C[Sample video frames]
+    C --> D[STFPM for grid / YOLO26 + PatchCore-style for other categories]
+    D --> E[Calibrated score + heatmap + ROI]
+    E --> F{Sentinel mode}
+    F -->|Detection only| G[Visual report]
+    F -->|RL-assisted| H[PPO V4]
+    H --> I[MONITOR / FLAG_ANOMALY / HUMAN_REVIEW]
+    B -->|Adaptive Visual Inspection| J[ResNet-18 frame embedding]
+    J --> K{kNN / Mahalanobis / One-Class SVM}
+    K --> L[Team route score + fixed threshold]
+    L --> M{Mahalanobis + policy available?}
+    M -->|Yes| N[Q-learning recommendation]
+    M -->|No| O[Vision-only report]
+    G --> P[Dashboard + CSV + video]
+    I --> P
+    N --> Q[Dashboard + review clip + CSV]
+    O --> Q
 ```
 
-The visual detector and PPO solve different jobs. The detector produces evidence; PPO chooses an inspection action based on the evidence and recent history.
+Sentinel and the team route solve related but separate tasks. Within Sentinel, the visual detector produces evidence and PPO V4 chooses an inspection action based on that evidence and recent history. In the team route, a selected ResNet-18-based detector produces its own score; the Q-learning scheduler can recommend a next step only for the supported Mahalanobis configuration.
 
----
+The two routes are not cross-calibrated and their scores, thresholds, heatmaps, and policy actions should not be treated as directly interchangeable.
 
 ## Why did we use each model?
 
@@ -107,6 +143,21 @@ This project uses five categories: `grid`, `zipper`, `hazelnut`, `leather`, and 
 The experiments showed that the same detector did not perform equally well on every category. A repeated texture like **grid** presents a different problem from a three-dimensional object like a **hazelnut** or a **toothbrush**. The project therefore uses a **hybrid detector**: STFPM for grid, and YOLO26 global embeddings with a PatchCore-style local patch memory for the other four categories.
 
 This category routing is based on the notebook's held-out development comparisons. It is not meant to claim that one model is universally best for all products.
+
+
+### Why does the team route use ResNet-18 embeddings?
+
+The Adaptive Visual Inspection route is a separate implementation using a pretrained ResNet-18 encoder. Each sampled frame is represented as a 512-dimensional feature vector. The pipeline then applies one selected anomaly-scoring method to compare the embedding with category-specific normal-reference data.
+
+| Method | How it works |
+|---|---|
+| **kNN cosine distance** | Compares an embedding with nearby normal-reference embeddings using cosine distance (`k=5`). |
+| **Mahalanobis distance** | Measures deviation from the normal-reference distribution with Ledoit–Wolf covariance shrinkage. |
+| **One-Class SVM** | Learns a boundary around normal embeddings with an RBF kernel (`nu=0.1`); larger reported scores indicate more anomaly evidence. |
+
+Each method has a fixed, category-specific cutoff derived from the 95th percentile of its cross-validated normal-reference scores. Scores are normalized empirically against the corresponding normal-reference score distribution. Users can see the raw cutoff and normalized threshold in the dashboard, but cannot adjust them there.
+
+These are selectable alternatives, not an ensemble: the team route does not average the three methods into a single detector.
 
 ### Why STFPM for grid?
 
@@ -197,9 +248,22 @@ The V4-toothbrush checkpoint uses a revised path-disjoint fit/development split 
 
 ---
 
+## How does the team's Q-learning scheduler work?
+
+The team route contains a separate Q-learning scheduler built for the original Step 2 experiment. It is not the same policy as Sentinel's PPO V4 controller.
+
+- **Input method:** Mahalanobis scores only. The supplied Step 2 workflow filters for Mahalanobis results; the policy is not applied to kNN or One-Class SVM.
+- **State:** `(category, risk_level)`, where risk level is derived from the normalized score's margin around the normalized threshold.
+- **Actions:** `skip`, `prediction`, and `expert`.
+- **Reward setup:** Uses the Step 2 notebook's action costs and missed-defect / false-rejection penalties.
+
+The dashboard enables Q-learning only when Mahalanobis is selected and a compatible policy asset is available. At runtime, `expert` is described as a **human-review recommendation**. The offline notebook's assumption of a perfect expert is a simulation assumption, not an automated expert prediction.
+
+Sentinel's PPO V4 uses its own 20-feature observation and outputs `MONITOR`, `FLAG_ANOMALY`, or `HUMAN_REVIEW`. The two policies have different state/action definitions and must remain separate.
+
 ## Results
 
-The tables below come from the recorded notebook outputs shared with this project. They are **not all the same experiment**: detector metrics are measured on held-out images, while temporal and PPO metrics are calculated over synthetic sequences. Read the dataset size and evaluation notes with every table.
+The tables below come from the recorded Sentinel notebook outputs. They are **not all the same experiment**: detector metrics are measured on held-out images, while temporal and PPO metrics are calculated over synthetic sequences. Read the dataset size and evaluation notes with every table. The App3 integration description supplied for the team route documents its methods and runtime behavior but does not include a comparable numerical result table, so this README does not invent performance numbers for that route.
 
 ### 1. Hybrid anomaly detector — held-out MVTec images
 
@@ -262,6 +326,12 @@ In the same comparison, the 173 review events had **96.53% event precision**, wi
 
 One training detail worth noting: in the V4-toothbrush development run, no candidate met the requested 98% development-precision floor. The script selected the highest development F2 candidate and then evaluated it on the held-out set. The held-out V4 precision is therefore **not** 98%, and the README does not present it as such.
 
+### 5. Adaptive Visual Inspection route
+
+The team route exposes three independent ResNet-18-based detectors and an optional Mahalanobis-conditioned Q-learning scheduler. Its fixed category thresholds are derived from the 95th percentile of cross-validated normal-reference scores. The source integration README does not provide held-out AUROC/AP or thresholded precision/recall tables for this branch, so no such results are reported here.
+
+The team route's thresholds and normalized scores belong to its own reference distribution. They should not be compared numerically with Sentinel's ECDF scores or PPO results. To make a fair empirical comparison, run both routes on the same category and aligned sampled frames, then compare frame-level NORMAL/ANOMALY outcomes against the same ground-truth labels where available.
+
 ---
 
 ## What do the metrics mean?
@@ -283,6 +353,8 @@ One training detail worth noting: in the V4-toothbrush development run, no candi
 
 The selected high-anomaly threshold is used to highlight and summarize frames in the app; it should not be read as a model confidence probability.
 
+The Adaptive Visual Inspection route also normalizes scores empirically against its own normal-reference distribution. Its raw and normalized values have a different construction from Sentinel's scores; the same numeric value does not guarantee the same anomaly severity across the two routes.
+
 ---
 
 ## Dataset and experiment setup
@@ -300,6 +372,8 @@ The notebook run reported **1,705 images** across the selected five categories: 
 
 The remainder of the 505 test images formed the 152-image controller-development partition. Counts may differ if you download another dataset revision or recreate the split with different code/settings.
 
+
+The Adaptive Visual Inspection route uses the same five object categories but has its own ResNet-18 embedding-reference workflow and its own cross-validated normal-reference score distributions. Its Colab asset builder exports these reference bundles and policy-related artifacts separately from Sentinel. The exported references support local inference without keeping the full MVTec dataset on the PC.
 ### Why do we keep saying “synthetic sequence”?
 
 MVTec AD is an **image dataset**, not a dataset of continuous factory videos with real time stamps. To test a sequential policy, images and their scores were arranged into controlled sequences, such as sudden score spikes or persistent high scores. This lets us test score-history features, action timing, and cooldown behaviour, but it does not reproduce every property of real video: motion blur, lighting changes, camera movement, object tracking, or true defect onset over time.
@@ -312,14 +386,13 @@ The demonstration human-review clip is also built from MVTec still images. It is
 
 ### 1. Get the files
 
-Clone or download this repository. The app source is in `MVTec_Video_Inspector_App/` in the app bundle. Keep the trained model assets in the project directory described below.
+Use the integrated project layout shown in the next section. The shared entry point is `app3.py`. Keep the existing Sentinel files (`app2.py`, `inference2.py`, `models/`, and `assets/`) intact while adding the team route files and `team_artifacts/`.
 
 ### 2. Create a Python environment
 
-Python **3.11 or 3.12** is recommended. On Windows PowerShell:
+Python **3.11 or 3.12** is recommended. On Windows PowerShell, from the project root:
 
 ```powershell
-cd .\MVTec_Video_Inspector_App
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -327,16 +400,40 @@ python -m pip install --upgrade pip
 
 If you use an NVIDIA GPU, install a PyTorch/torchvision build that matches your CUDA setup using the [official PyTorch installation selector](https://pytorch.org/get-started/locally/) before installing the remaining requirements.
 
-Then install the project requirements and start Streamlit:
+Install the required packages if they are not already present:
 
 ```powershell
-pip install -r requirements.txt
-streamlit run app.py
+python -m pip install streamlit torch torchvision opencv-python numpy pandas pillow scikit-learn
 ```
 
-Open the local URL printed in the terminal, normally `http://localhost:8501`.
+For browser-compatible MP4 review-clip export, `imageio-ffmpeg` may also be useful:
 
-### 3. Point Sentinel at the model project folder
+```powershell
+python -m pip install imageio-ffmpeg
+```
+
+Avoid reinstalling packages unnecessarily if Sentinel already runs in the environment.
+
+### 3. Prepare the team's assets
+
+1. Open `colab_asset_builder.ipynb` in Google Colab.
+2. Select a GPU runtime if available.
+3. Run the notebook from top to bottom to build and export the team reference and policy artifacts.
+4. Download `MVTec_Team_Assets.zip` and extract it into the project root beside `app3.py`.
+
+The asset bundle contains the team route's reference assets; it does not package the complete MVTec dataset. Once the assets are extracted, local inference for the team route does not require the full dataset on the PC.
+
+### 4. Launch App3
+
+From the project root with the virtual environment active:
+
+```powershell
+python -m streamlit run app3.py
+```
+
+Open the local address printed by Streamlit. Choose **Open Sentinel** for the existing Sentinel implementation or **Open Adaptive Inspection** for the team's separate route.
+
+### 5. Point Sentinel to its model project
 
 Sentinel uses this default:
 
@@ -344,82 +441,107 @@ Sentinel uses this default:
 default_project = os.environ.get("MVTEC_PROJECT_DIR", str(Path.cwd()))
 ```
 
-In other words, if `MVTEC_PROJECT_DIR` is not set, it looks in the current working directory. Set the variable to the folder that contains your `models/` and `assets/` folders. Example:
+If `MVTEC_PROJECT_DIR` is not set, it looks in the current working directory. Set it to the folder that contains Sentinel's `models/` and `assets/` folders if needed:
 
 ```powershell
-$env:MVTEC_PROJECT_DIR = "C:\Users\<you>\Desktop\MVTec_RL_Anomaly_Project"
-streamlit run app.py
+$env:MVTEC_PROJECT_DIR = "C:\path\to\MVTec_RL_Anomaly_Project"
+python -m streamlit run app3.py
 ```
 
-Use your actual path; the example is only a template.
-
-### 4. Dataset download for notebook experiments
-
-The main notebook downloads the Kaggle mirror using `kagglehub` and searches for the five expected category folders. The dataset stays in the Colab runtime/cache; model checkpoints, calibration files, reports, and exported demos are saved to Google Drive under:
-
-```text
-/content/drive/MyDrive/MVTec_RL_Anomaly_Project/
-```
-
-Do not commit your Kaggle token or other credentials to GitHub.
-
----
+Replace the example path with your actual project path. The team route uses its separate `team_artifacts/` directory.
 
 ## Required model files
 
-The visual detector needs its saved feature extractor, category reference banks, and calibration assets. RL-assisted inspection additionally needs the temporal context assets used by the app and a PPO checkpoint.
+The integrated project has two model/asset areas. **Sentinel's assets remain separate from the team's assets.** Do not replace one route's calibration files, reference banks, or policy with the other route's files.
 
-Expected layout inside the project directory:
+Expected layout inside the project root:
 
 ```text
-MVTec_RL_Anomaly_Project/
-├── models/
+your_project/
+├── app3.py                              # Shared App3 hub
+├── app2.py                              # Existing Sentinel app — preserve
+├── inference2.py                        # Existing Sentinel inference — preserve
+├── team_inference.py                    # Team's separate ResNet-18 pipeline
+├── rebuild_mahalanobis_policy.py        # Optional team Q-policy rebuild helper
+├── colab_asset_builder.ipynb             # Team asset-export workflow
+├── pages/
+│   ├── 01_Sentinel.py                   # Navigation adapter to Sentinel
+│   └── 02_Adaptive_Inspection.py        # Team vision + Q-learning route
+├── models/                              # Sentinel model weights and memory banks
 │   ├── yolo26n.pt
 │   ├── wide_resnet50_2_patch_extractor.pth
 │   ├── stfpm_teacher_resnet18_grid.pth
 │   ├── stfpm_student_resnet18_grid.pth
 │   ├── yolo26_embedding_knn_<category>.joblib
 │   ├── patchcore_patch_bank_<category>.pt
-│   ├── causal_temporal_transformer.pt                 # RL mode context asset
-│   ├── temporal_transformer_input_scaler.joblib       # RL mode context asset
-│   ├── ppo_monitor_flag_escalate_recall_v4toothbrush.zip  # preferred policy
-│   └── ppo_inspection_policy.zip                      # optional legacy fallback
-├── assets/
+│   ├── causal_temporal_transformer.pt
+│   ├── temporal_transformer_input_scaler.joblib
+│   ├── ppo_monitor_flag_escalate_recall_v4toothbrush.zip
+│   └── ppo_inspection_policy.zip         # Optional legacy fallback
+├── assets/                              # Sentinel calibration and config
 │   ├── calibration_<category>.npz
-│   └── stfpm_calibration_grid.npz
-└── results/
-    └── ppo_monitor_flag_escalate_recall_v4toothbrush_config.json  # optional config
+│   ├── stfpm_calibration_grid.npz
+│   └── decision_thresholds.json          # Optional per-category override
+└── team_artifacts/                      # Team route assets; separate from Sentinel
+    ├── asset_manifest.json
+    ├── vision/
+    │   ├── resnet18_imagenet1k_v1.pth
+    │   ├── reference_grid.npz
+    │   ├── reference_zipper.npz
+    │   ├── reference_hazelnut.npz
+    │   ├── reference_leather.npz
+    │   ├── reference_toothbrush.npz
+    │   └── vision_asset_summary.csv
+    ├── outputs/
+    │   └── vision/
+    │       └── current_anomaly_score.csv
+    └── rl/
+        ├── shared_q_policy.json
+        └── heldout_policy_decisions.csv
 ```
 
-The `<category>` name is one of the five supported categories. Exact filenames must match the files generated by the training notebook or packaged with the model bundle.
+The `<category>` name is one of `grid`, `zipper`, `hazelnut`, `leather`, or `toothbrush`. Exact Sentinel filenames must match the files exported by the main notebook/model bundle.
 
-**Important:** the source-code ZIP does not include the full trained model weights. You need to keep or download your model asset bundle separately. Large weights and the MVTec dataset should generally be stored outside the Git source history or managed with an appropriate large-file/release workflow.
+The team asset builder exports the ResNet-18 weights, category-specific normal-reference bundles, calibration information, score output used by the policy helper, and shared Q-learning policy. The `current_anomaly_score.csv` file is needed only if you want to rebuild the shared policy with `rebuild_mahalanobis_policy.py`. The asset builder may also export audit and manifest files; keep those with `team_artifacts/`.
 
-Detection-only mode does not need the PPO checkpoint or Transformer assets, but it still needs the visual detector assets for the supported categories. RL-assisted mode needs the PPO V4 checkpoint to activate V4; if it is missing, the app may fall back to a legacy controller and show a warning. Always check the **Active controller** message in the app.
+**Large assets are not part of the source-code README.** Keep model weights and MVTec data outside the Git source history or use an appropriate large-file/release workflow. Do not commit Kaggle tokens or credentials.
 
----
+Sentinel detection-only mode does not need its PPO or Transformer assets, but it still needs Sentinel's visual detector assets. Sentinel RL-assisted mode needs the PPO V4 checkpoint for V4; if it is missing, the app may use the legacy policy and show a warning. The team Q-learning route needs its own `team_artifacts/` references and compatible policy file.
 
 ## Using the app
 
-1. Start Streamlit and choose **Anomaly Detection Only** or **RL-Assisted Inspection**.
-2. Select the category that matches the object in the video. The detector is category-specific, so the category matters.
-3. Choose the ROI mode and the high-anomaly reporting threshold.
-4. Upload a video (for example MP4, MOV, AVI, or MKV) and click **Inspect this video**.
-5. Inspect the annotated video, score trace, heatmap, frame table, and—if RL mode is enabled—the PPO action trace.
-6. Click **Create dashboard** to generate the statistics and action summaries for this run.
-7. Export the CSV, standalone HTML dashboard, or complete results ZIP if you want to attach the results to a report.
+### Sentinel route
 
-### What does the dashboard report?
+1. Start App3 and choose **Open Sentinel**.
+2. Choose **Anomaly Detection Only** or **RL-Assisted Inspection**.
+3. Select the category that matches the product in the video. The detector is category-specific.
+4. Choose the ROI mode and high-anomaly reporting threshold.
+5. Upload a video (for example MP4, MOV, AVI, or MKV) and click **Inspect this video**.
+6. Inspect the annotated video, score trace, heatmap, frame table, and—if RL mode is enabled—the PPO action trace.
+7. Click **Create dashboard** to generate run statistics and action summaries. Export the CSV, standalone HTML dashboard, or complete results ZIP as needed.
 
-Depending on the selected mode, it can report the number of sampled frames and high-score frames, average/minimum/maximum anomaly scores, frames and timestamps for score extremes, top-scoring frames, and the distribution of scores. In RL mode it also reports `MONITOR`, `FLAG_ANOMALY`, and `HUMAN_REVIEW` actions, including the frame/timestamp for each recorded event.
+### Adaptive Visual Inspection route
 
-Frame numbers refer to the sampled/source-frame trace produced by the app. Keep the exported CSV with the video if you need to locate an event again.
+1. Choose **Open Adaptive Inspection** from App3 or Streamlit's page selector.
+2. Select the product category and one of the three vision methods: kNN cosine distance, Mahalanobis distance, or One-Class SVM.
+3. Upload the inspection video and set the sampling interval and maximum number of sampled frames.
+4. Review raw and normalized scores, the fixed threshold, risk level, and NORMAL/ANOMALY predictions.
+5. The Q-learning action and recommended next step are available only when Mahalanobis is selected and a compatible policy is present.
+6. Review the score timeline and action counts, then download the frame-level CSV or sampled-frame review clip.
 
-### Why might the video still fail to play in a browser?
+### What do the dashboards report?
 
-Browser video support depends on the codec, not only on the `.mp4` filename. Sentinel attempts to transcode the annotated video to H.264 MP4 and then WebM/VP9 if necessary. If playback fails, install the listed `imageio-ffmpeg` dependency, restart Streamlit, and inspect the message shown near the video. The downloadable output is a fallback, not the intended primary playback path.
+Sentinel can report the number of sampled and high-score frames, average/minimum/maximum scores, timestamps for score extremes, top-scoring frames, score distributions, and PPO actions/events in RL mode.
 
----
+The team route reports frames scored, anomalies flagged, anomaly rate, mean normalized score, its fixed threshold, and—when Q-learning is enabled—the action distribution. It also provides the sampled-frame review clip and CSV.
+
+### Why can't the two score charts be compared directly?
+
+The pipelines use different feature representations and independent normal-reference distributions. Their raw scores, normalized scores, thresholds, heatmaps/localization outputs, and RL actions have different meanings. A careful comparison should use the same category, aligned sampled frames, and consistent ground-truth labels, then compare frame-level NORMAL/ANOMALY outcomes.
+
+### Why might an exported video fail to play in a browser?
+
+Browser support depends on the codec, not only the `.mp4` extension. Sentinel attempts to transcode its annotated result to H.264 MP4 and then WebM/VP9 if needed. The team route's sampled-frame review clip is a separate output. If playback fails, install `imageio-ffmpeg`, restart Streamlit, and check the message shown near the video.
 
 ## Project notebooks
 
@@ -431,12 +553,15 @@ The notebooks preserve different stages of the investigation. Their outputs are 
 | `PPO_Standalone_Monitor_Flag_Escalate_v3.ipynb` | Standalone PPO training and policy comparison work. The notebook filename reflects an earlier version and may contain later V4-toothbrush training/evaluation cells. | The current app's preferred checkpoint is `ppo_monitor_flag_escalate_recall_v4toothbrush.zip`; use the V4-toothbrush row in the PPO table above. |
 | `PPO_RecallBalanced_v4toothbrush_Cell.ipynb` | The self-contained V4-toothbrush training cell with the path-disjoint fit/development split and new output names. | This is the clearest entry point for understanding the current V4 checkpoint if you are including it in the repository. |
 | `MVTec_PPO_HumanReview_Clip_OneCell.ipynb` | Replays held-out synthetic sequences with the V4 checkpoint and exports an annotated clip and trace containing a learned `HUMAN_REVIEW` action. | Use it as an example/replay utility, not as the training notebook. |
+| `colab_asset_builder.ipynb` | Builds and exports the separate team's ResNet-18 reference, calibration, score-output, and Q-policy assets. | Use it to create `MVTec_Team_Assets.zip` for the Adaptive Visual Inspection route. |
+| Team's original Step 2 Q-learning notebook | The source workflow for the shared Mahalanobis-conditioned policy, its state/action definition, and reward setup. | Keep the policy input method consistent with Mahalanobis; the scheduler is not intended for kNN or One-Class SVM scores. |
+| `rebuild_mahalanobis_policy.py` | Optional local helper that rebuilds the Step 2-compatible policy from `team_artifacts/outputs/vision/current_anomaly_score.csv`. | Use only when the expected score file exists; the helper writes team policy/audit outputs under `team_artifacts/`. |
 
 If you rename the notebooks before committing them, update the paths in this table.
 
 ### Important note about the notebook names
 
-The name `MVTEC_FINAL` does not mean every checkpoint in it is the one used by the app now. That notebook contains earlier PPO experiments for historical comparison. The **current policy for the app is V4-toothbrush**. The main notebook remains useful because it documents the detector choice, feature experiments, subtype results, and the earlier temporal modelling work.
+The name `MVTEC_FINAL` does not mean every checkpoint in it is the one used by the app now. That notebook contains earlier PPO experiments for historical comparison. The **current Sentinel policy is V4-toothbrush**. The team route has its own Q-learning policy, stored under `team_artifacts/rl/`, and it is used only with the Mahalanobis vision method. The main notebook remains useful because it documents Sentinel's detector choice, feature experiments, subtype results, and earlier temporal modelling work.
 
 ---
 
@@ -452,6 +577,10 @@ This project is a research prototype. The current evidence is encouraging, but a
 6. **Camera/domain shift.** MVTec product images are controlled and tightly framed. Real cameras introduce changing light, focus, perspective, motion blur, backgrounds, and product positioning.
 7. **The detector is category-specific.** Select the category matching the item being inspected. This project is not a universal open-world detector for arbitrary products.
 8. **Large assets are separate.** Model weights and data are not necessarily included in the GitHub source. Follow the asset layout above and keep credentials out of the repository.
+9. **The team route has its own threshold calibration.** Its cutoffs are fixed from its own normal-reference scores and must not be substituted for Sentinel's category thresholds.
+10. **The team Q-learning policy is method-specific.** It is trained for Mahalanobis score inputs and should not be used with kNN or One-Class SVM.
+11. **The team route's perfect-expert assumption is simulated.** The runtime `expert` action is a human-review recommendation, not an automated expert judgement.
+12. **The two pipelines remain independent.** Do not directly rank their scores or combine their actions without a dedicated cross-evaluation on aligned frames and shared ground truth.
 
 ### What should we do next?
 
@@ -478,6 +607,6 @@ This project is a research prototype. The current evidence is encouraging, but a
 
 ## Final takeaway
 
-The project started with image-level anomaly detection and grew into a small inspection workflow: choose the appropriate detector, score and visualize suspicious regions, use a learned PPO V4 policy to decide whether to monitor, flag, or request human review, then export the evidence in a dashboard and frame-level trace.
+The integrated project offers one App3 entry point with two independent inspection approaches. Sentinel combines a category-routed visual detector, heatmaps, dashboards, and an optional PPO V4 controller that can `MONITOR`, `FLAG_ANOMALY`, or `HUMAN_REVIEW`. The Adaptive Visual Inspection route adds three ResNet-18-based anomaly-scoring options and a separate Mahalanobis-conditioned Q-learning recommendation layer.
 
-The most useful result so far is that **PPO V4 improved recall on the synthetic held-out evaluation**. The next milestone is to establish whether that trade-off remains useful on real, continuously recorded inspection video.
+The reported Sentinel result is that **PPO V4 improved recall on the synthetic held-out sequence evaluation**, with a precision trade-off. The two approaches are not fused: their models, calibration assets, thresholds, and policies remain separate. The next milestone is to validate both approaches on real, continuously recorded inspection video and compare them on aligned frames with shared ground truth.
